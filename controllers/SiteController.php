@@ -2,13 +2,17 @@
 
 namespace app\controllers;
 
+use app\components\Notification;
+use app\models\application\Users;
+use app\models\basic\ScoreActions;
+use app\models\forms\TransferForm;
 use Yii;
+use yii\data\ActiveDataProvider;
 use yii\filters\AccessControl;
 use yii\web\Controller;
 use yii\web\Response;
 use yii\filters\VerbFilter;
-use app\models\LoginForm;
-use app\models\ContactForm;
+use app\models\forms\LoginForm;
 
 class SiteController extends Controller
 {
@@ -20,12 +24,16 @@ class SiteController extends Controller
         return [
             'access' => [
                 'class' => AccessControl::className(),
-                'only' => ['logout'],
+                'only' => ['logout', 'index'],
                 'rules' => [
                     [
                         'actions' => ['logout'],
                         'allow' => true,
                         'roles' => ['@'],
+                    ],
+                    [
+                        'actions' => ['index'],
+                        'allow' => true,
                     ],
                 ],
             ],
@@ -54,14 +62,89 @@ class SiteController extends Controller
         ];
     }
 
+    public function beforeAction($action)
+    {
+        return parent::beforeAction($action);
+
+    }
+
     /**
-     * Displays homepage.
-     *
-     * @return string
+     * Lists all Users models.
+     * @return mixed
      */
     public function actionIndex()
     {
-        return $this->render('index');
+        $query = Users::find();
+        if(!Yii::$app->user->isGuest){
+            $query->andWhere(['!=', 'id', Yii::$app->user->id]);
+        }
+        $dataProvider = new ActiveDataProvider([
+            'query' => $query,
+            'pagination' => [
+                'defaultPageSize' => 10,
+                'pageSize' => 10,
+                'pageSizeLimit' => [1, 10]
+            ],
+            'sort'=> ['defaultOrder' => ['score'=>SORT_DESC]]
+        ]);
+
+        return $this->render('index', [
+            'dataProvider' => $dataProvider,
+        ]);
+    }
+
+    /**
+     * Lists all ScoreActions models.
+     * @return mixed
+     */
+    public function actionScoreActions()
+    {
+        $dataProvider = new ActiveDataProvider([
+            'query' => ScoreActions::find()
+                ->where([
+                    'or',
+                    ['sender_id' => Yii::$app->user->id],
+                    ['receiver_id' => Yii::$app->user->id]
+                ]),
+            'pagination' => [
+                'defaultPageSize' => 10,
+                'pageSize' => 10,
+                'pageSizeLimit' => [1, 10]
+            ],
+            'sort'=> ['defaultOrder' => ['created_at'=>SORT_DESC]]
+        ]);
+
+        return $this->render('score_actions', [
+            'dataProvider' => $dataProvider,
+        ]);
+    }
+
+    public function actionTransfer($username, $amount){
+        \Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
+
+        $form = new TransferForm(['username' => $username, 'amount' => $amount]);
+
+        if(Yii::$app->request->isAjax && $form->validate() && $form->transfer()){
+
+            Yii::$app->response->statusCode = 200;
+
+            Notification::success(
+                Notification::KEY_SUCCESS_TRANSFER_MESSAGE,
+
+                $form->getReceiver() ? $form->getReceiver()->id : null,
+                $form->getSender() ? $form->getSender()->id : null
+            );
+        } else {
+            Notification::error(
+                Notification::KEY_ERROR_TRANSFER_MESSAGE,
+                $form->getReceiver() ? $form->getReceiver()->id : null,
+                $form->getSender() ? $form->getSender()->id : null
+            );
+
+            Yii::$app->response->statusCode = 422;
+
+            Yii::$app->response->data = $form->errors;
+        }
     }
 
     /**
@@ -80,7 +163,6 @@ class SiteController extends Controller
             return $this->goBack();
         }
 
-        $model->password = '';
         return $this->render('login', [
             'model' => $model,
         ]);
@@ -96,33 +178,5 @@ class SiteController extends Controller
         Yii::$app->user->logout();
 
         return $this->goHome();
-    }
-
-    /**
-     * Displays contact page.
-     *
-     * @return Response|string
-     */
-    public function actionContact()
-    {
-        $model = new ContactForm();
-        if ($model->load(Yii::$app->request->post()) && $model->contact(Yii::$app->params['adminEmail'])) {
-            Yii::$app->session->setFlash('contactFormSubmitted');
-
-            return $this->refresh();
-        }
-        return $this->render('contact', [
-            'model' => $model,
-        ]);
-    }
-
-    /**
-     * Displays about page.
-     *
-     * @return string
-     */
-    public function actionAbout()
-    {
-        return $this->render('about');
     }
 }

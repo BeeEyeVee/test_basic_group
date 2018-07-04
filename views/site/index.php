@@ -1,53 +1,80 @@
 <?php
 
+use yii\helpers\Html;
+use yii\grid\GridView;
+use yii\widgets\Pjax;
+use kartik\slider\Slider;
+use app\models\application\Users;
+
 /* @var $this yii\web\View */
+/* @var $dataProvider yii\data\ActiveDataProvider */
 
-$this->title = 'My Yii Application';
+$this->title = Yii::t('app', 'Public Users');
+$this->params['breadcrumbs'][] = $this->title;
 ?>
-<div class="site-index">
+<div class="users-index">
 
-    <div class="jumbotron">
-        <h1>Congratulations!</h1>
+    <h1><?= Html::encode($this->title) ?></h1>
+    <?php Pjax::begin(['id' => 'userPjaxContent']); ?>
 
-        <p class="lead">You have successfully created your Yii-powered application.</p>
-
-        <p><a class="btn btn-lg btn-success" href="http://www.yiiframework.com">Get started with Yii</a></p>
-    </div>
-
-    <div class="body-content">
-
-        <div class="row">
-            <div class="col-lg-4">
-                <h2>Heading</h2>
-
-                <p>Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et
-                    dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip
-                    ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu
-                    fugiat nulla pariatur.</p>
-
-                <p><a class="btn btn-default" href="http://www.yiiframework.com/doc/">Yii Documentation &raquo;</a></p>
-            </div>
-            <div class="col-lg-4">
-                <h2>Heading</h2>
-
-                <p>Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et
-                    dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip
-                    ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu
-                    fugiat nulla pariatur.</p>
-
-                <p><a class="btn btn-default" href="http://www.yiiframework.com/forum/">Yii Forum &raquo;</a></p>
-            </div>
-            <div class="col-lg-4">
-                <h2>Heading</h2>
-
-                <p>Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et
-                    dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip
-                    ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu
-                    fugiat nulla pariatur.</p>
-
-                <p><a class="btn btn-default" href="http://www.yiiframework.com/extensions/">Yii Extensions &raquo;</a></p>
-            </div>
-        </div>
-
-    </div>
+    <?= GridView::widget([
+        'dataProvider' => $dataProvider,
+        'columns' => [
+            ['class' => 'yii\grid\SerialColumn'],
+            'username',
+            'score',
+            [
+                'class' => 'yii\grid\ActionColumn',
+                'template' => '{register}{slider}{approve}',
+                'options' => [
+                    'class' => 'block--actions '
+                ],
+                'visibleButtons' => [
+                    'approve' => !Yii::$app->user->isGuest,
+                    'slider' => !Yii::$app->user->isGuest,
+                    'register' => Yii::$app->user->isGuest,
+                ],
+                'buttons' => [
+                    'register' => function ($url, $model) {
+                        return Html::a(
+                            '<span class="glyphicon glyphicon-user"></span>',
+                            '/site/login',
+                            [
+                                'title' => 'Register | Login',
+                            ]
+                        );
+                    },
+                    'approve' => function ($url, $model) {
+                        return Html::button(
+                            '<span class="glyphicon glyphicon-arrow-down"></span>',
+                            [
+                                'title' => 'Approve',
+                                'class' => 'js-approve-transfer',
+                                'data-username' => $model->username,
+                                'data-url' => \yii\helpers\Url::toRoute(['site/transfer', 'username' => $model->username, 'amount' => ''])
+                            ]
+                        );
+                    },
+                    'slider' => function ($url, $model) {
+                        return '<div class="col-md-10">' . Slider::widget([
+                                'value' => 0,
+                                'name' => 'slider_user_' . $model->username,
+                                'pluginOptions' => [
+                                    'min' => 0,
+                                    'max' => Yii::$app->user->identity->score - Users::MIN_VALUE_SCORE,
+                                    'step' => 0.01,
+                                    'tooltip' => 'always',
+                                    'precision' => 2,
+                                    'handle' => 'triangle',
+                                ],
+                                'options' => [
+                                    'disabled' => (Yii::$app->user->identity->score - Users::MIN_VALUE_SCORE) <= 0
+                                ]
+                            ]) . '</div>';
+                    },
+                ],
+            ],
+        ],
+    ]); ?>
+    <?php Pjax::end(); ?>
 </div>

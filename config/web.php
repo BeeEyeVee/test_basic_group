@@ -11,10 +11,27 @@ $config = [
         '@bower' => '@vendor/bower-asset',
         '@npm'   => '@vendor/npm-asset',
     ],
+    'modules' => [
+        'notifications' => [
+            'class' => 'machour\yii2\notifications\NotificationsModule',
+            // Point this to your own Notification class
+            // See the "Declaring your notifications" section below
+            'notificationClass' => 'app\components\Notification',
+            // Allow to have notification with same (user_id, key, key_id)
+            // Default to FALSE
+            'allowDuplicate' => true,
+            // Allow custom date formatting in database
+            'dbDateFormat' => 'Y-m-d H:i:s',
+            // This callable should return your logged in user Id
+            'userId' => function() {
+                return \Yii::$app->user->id;
+            }
+        ],
+    ],
     'components' => [
         'request' => [
             // !!! insert a secret key in the following (if it is empty) - this is required by cookie validation
-            'cookieValidationKey' => '',
+            'cookieValidationKey' => '19268032f19c83788fe11a8f8e24de83a212607c',
         ],
         'cache' => [
             'class' => 'yii\caching\FileCache',
@@ -43,14 +60,12 @@ $config = [
             ],
         ],
         'db' => $db,
-        /*
         'urlManager' => [
             'enablePrettyUrl' => true,
             'showScriptName' => false,
             'rules' => [
             ],
         ],
-        */
     ],
     'params' => $params,
 ];
@@ -61,14 +76,14 @@ if (YII_ENV_DEV) {
     $config['modules']['debug'] = [
         'class' => 'yii\debug\Module',
         // uncomment the following to add your IP if you are not connecting from localhost.
-        //'allowedIPs' => ['127.0.0.1', '::1'],
+        'allowedIPs' => ['*','127.0.0.1', '::1'],
     ];
 
     $config['bootstrap'][] = 'gii';
     $config['modules']['gii'] = [
         'class' => 'yii\gii\Module',
         // uncomment the following to add your IP if you are not connecting from localhost.
-        //'allowedIPs' => ['127.0.0.1', '::1'],
+        'allowedIPs' => ['*','127.0.0.1', '::1'],
     ];
 }
 
